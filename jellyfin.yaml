@@ -1,0 +1,17 @@
+services:
+  jellyfin:
+    image: jellyfin/jellyfin
+    container_name: jellyfin
+    restart: unless-stopped
+    devices:
+      - /dev/dri:/dev/dri
+    volumes:
+      - /data/compose/3/jellyfin/config:/config
+      - /media:/media
+    environment:
+      - LIBVA_DRIVER_NAME=iHD
+      - LIBVA_DRIVERS_PATH=/usr/lib/jellyfin-ffmpeg/lib/dri
+      - LD_LIBRARY_PATH=/usr/lib/jellyfin-ffmpeg/lib
+    network_mode: host
+    extra_hosts:
+      - "host.docker.internal:host-gateway"

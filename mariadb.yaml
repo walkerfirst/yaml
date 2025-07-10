@@ -1,0 +1,20 @@
+# mariadb-compose.yml
+services:
+  mariadb:
+    image: mariadb:11
+    volumes:
+      - ./mysql_data:/var/lib/mysql # 数据目录统一管理
+    ports:
+      - "3306:3306" # 或 0.0.0.0:3306:3306（默认行为）
+    environment:
+      MARIADB_ROOT_PASSWORD: "root" # 仅保留root密码
+      # 不设置 MARIADB_DATABASE、MARIADB_USER 等参数！
+      MARIADB_ROOT_HOST: "localhost" # 禁止root远程登录
+    networks:
+      - mariadb_network
+
+networks:
+  mariadb_network:
+    name: mariadb_network
+    driver: bridge
+    attachable: true # 允许其他容器后期加入

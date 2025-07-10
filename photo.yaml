@@ -1,0 +1,90 @@
+services:
+  photoprism:
+    image: photoprism/photoprism:latest
+    restart: unless-stopped
+    stop_grace_period: 10s
+    security_opt:
+      - seccomp:unconfined
+      - apparmor:unconfined
+    devices:
+      - "/dev/dri:/dev/dri" # Intel核显设备映射
+    ports:
+      - "2342:2342"
+    environment:
+      # ===== 硬件加速配置 =====
+      LIBVA_DRIVER_NAME: iHD
+      LIBVA_DRIVERS_PATH: /usr/lib/x86_64-linux-gnu/dri
+      LD_LIBRARY_PATH: /usr/lib/x86_64-linux-gnu:/usr/lib/jellyfin-ffmpeg/lib
+
+      # ===== AI/人脸识别优化 =====
+      PHOTOPRISM_INIT: "tensorflow-intel" # 人脸识别的模型
+      PHOTOPRISM_DISABLE_TENSORFLOW: "false" # 要开启人脸识别,必须是false
+      PHOTOPRISM_DISABLE_FACES: "false"
+      PHOTOPRISM_DISABLE_CLASSIFICATION: "true" # 不识别物体
+      PHOTOPRISM_TENSORFLOW_THREADS: "2" # 根据CPU物理核心数调整
+      PHOTOPRISM_WORKERS: "1" # 并行处理数
+      PHOTOPRISM_FACE_SIZE: "150" # 人脸检测分辨率(平衡精度/性能,默认150)
+
+      # ===== 基础配置 =====
+      PHOTOPRISM_ADMIN_USER: "admin"
+      PHOTOPRISM_ADMIN_PASSWORD: "admin.369" # 必须修改
+      PHOTOPRISM_AUTH_MODE: "password"
+      PHOTOPRISM_SITE_URL: "http://localhost:2342/"
+      PHOTOPRISM_SITE_TITLE: "My Photo Archive"
+
+      # ===== 数据库配置 =====
+      PHOTOPRISM_DATABASE_DRIVER: "mysql"
+      PHOTOPRISM_DATABASE_SERVER: "mariadb:3306"
+      PHOTOPRISM_DATABASE_NAME: "photoprism"
+      PHOTOPRISM_DATABASE_USER: "photoprism"
+      PHOTOPRISM_DATABASE_PASSWORD: "admin.369" # 必须修改
+
+      # ===== 存储与索引 =====
+      PHOTOPRISM_ORIGINALS_LIMIT: 5000
+      PHOTOPRISM_READONLY: "false"
+      PHOTOPRISM_BACKUP_SCHEDULE: "daily"
+      PHOTOPRISM_INDEX_SCHEDULE: "@every 6h"
+
+      # ===== 高级选项 =====
+      PHOTOPRISM_FFMPEG_ENCODER: "intel" # Intel QSV加速
+      PHOTOPRISM_FFMPEG_BITRATE: "20" # 视频转码比特率(Mbps)
+      PHOTOPRISM_LOG_LEVEL: "info"
+      PHOTOPRISM_DEBUG: "false"
+
+    volumes:
+      - "/media/photos:/photoprism/originals" # 照片库目录
+      - "/data/photoprism/storage:/photoprism/storage" # 配置存储
+      - "/etc/localtime:/etc/localtime:ro" # 时区同步
+    networks:
+      - mariadb_network # 必须与 MariaDB 的网络同名
+
+networks:
+  mariadb_network:
+    external: true
+    name: mariadb_network # 必须与MariaDB网络名一致
+
+# 事先准备
+# 先在mariadb中创建本项目所需的数据:
+# 创建数据库
+# -- 先创建数据库
+# CREATE DATABASE photoprism CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+# -- 创建用户并设置强密码
+# CREATE USER 'photoprism'@'%' IDENTIFIED BY 'admin.123';
+
+# -- 授权（生产环境建议缩小权限范围）
+# GRANT ALL PRIVILEGES ON photoprism.* TO 'photoprism'@'%';
+
+# -- 立即生效
+# FLUSH PRIVILEGES;
+
+# 宿主机文件系统:
+# ├── /data/mariadb/mysql_data/    ← MariaDB容器映射卷（存数据库文件）
+# │   └── photoprism/              ← 您创建的数据库
+# │       ├── albums.ibd           ← 相册表数据
+# │       └── photos.ibd           ← 照片元数据
+# │
+# └── /data/photoprism/storage/    ← PhotoPrism容器映射卷
+#     ├── cache/                   ← 缓存文件
+#     ├── thumbnails/              ← 缩略图
+#     └── config/                  ← 应用配置
