@@ -1,0 +1,28 @@
+# 如果遇到 command start not found 是因为/volume1/docker 权限不够.
+# 请重新用如下命令
+# # 1. 停止并删除现有容器
+# docker stop n8n
+# docker rm n8n
+# # 2. 修复目录权限
+# sudo chown -R 1000:1000 /volume1/docker/n8n
+# sudo chmod -R 755 /volume1/docker/n8n
+
+services:
+  n8n:
+    image: n8nio/n8n:latest
+    container_name: n8n
+    restart: unless-stopped
+    ports:
+      - "5678:5678"
+    environment:
+      - N8N_ENCRYPTION_KEY=b62acd1b-7b88-4920-beff-93745257fb91
+      - TZ=Asia/Shanghai
+      - N8N_HOST=0.0.0.0
+      - N8N_DIAGNOSTICS_ENABLED=false
+      - N8N_SKIP_LICENSE_ACTIVATION=true
+      - N8N_SECURE_COOKIE=false
+    dns:
+      - 8.8.8.8
+      - 1.1.1.1
+    volumes:
+      - /volume1/docker/n8n:/home/node/.n8n
